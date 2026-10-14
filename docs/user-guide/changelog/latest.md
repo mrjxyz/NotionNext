@@ -26,7 +26,7 @@
 
 ### 安全与接口
 
-- `/api/revalidate` 的单页请求默认只重建指定页；清理数据须显式传入 `invalidateData: true`，全站请求使用 `all: true`。批量重建默认每次最多 25 页，HTTP 202 返回剩余路径供调用方续传。多实例或 Serverless 部署要实现同步失效，必须配置所有实例共用的 Redis。
+- `/api/revalidate` 的单页请求默认只重建指定页；清理数据须显式传入 `invalidateData: true`，全站请求使用 `all: true`。批量重建默认每次最多 25 页，约 45 秒后停止启动新页面并以 HTTP 202 返回剩余路径供调用方续传，兼容未启用 Fluid Compute 的 Vercel Hobby 项目。多实例或 Serverless 部署要实现同步失效，必须配置所有实例共用的 Redis。
 - Notion OAuth 改为服务端授权流程：授权结果不再携带原始 token 或用户资料进入 URL、页面 props 和日志，回调绑定授权发起时的随机 state cookie。
 - 修复任意公开 Notion 块 id 可被渲染到本站域名下的问题（见升级须知 5）。
 - Mailchimp 订阅结果处理、Algolia 搜索请求生命周期的问题已修复；依赖安全审计补丁已合入。
@@ -62,6 +62,16 @@
 
 - Release：[v4.11.0](https://github.com/notionnext-org/NotionNext/releases/tag/v4.11.0)
 - 完整变更：[v4.10.10...v4.11.0](https://github.com/notionnext-org/NotionNext/compare/v4.10.10...v4.11.0)
+
+## 待发布：文章密码验证升级
+
+- 文章密码改为服务端验证；公开 HTML 与页面数据只提供保护标记和摘要，验证成功后才返回正文。所有内置主题均支持异步解锁，包括 OPC 和 Landing。
+- GitHub Pages 等纯静态部署仍可使用 `EXPORT=true` 构建。密码文章仅生成锁页，明确提示当前站点不支持解锁；公开文章继续正常导出。需要在线解锁时请使用带 Next.js 服务端的部署方式。
+- 公开文章只在构建或导出时允许安全降级：正文获取失败时显示摘要，后处理失败时保留已经过滤的正文。运行时 ISR 出错会保留上一次成功页面，避免以不完整内容覆盖；受保护正文和无法确认访问权限的 UUID 页面不会降级放行。
+- 未入目录的 UUID 子页面会补查祖先链，并继承公开发布（`Published`）或隐藏发布（`Invisible`）目录祖先的密码。隐藏发布子页面仍可通过链接访问，草稿不会放行。仅同工作区但没有已发布目录祖先的独立页面仍返回 404；需要访问时请将其加入目录并发布。
+- 旧版密码 URL 和 localStorage 会在尝试迁移后清理；新解锁状态仅保留在当前页面，刷新后需重新输入密码。更新后请重新生成旧静态产物及搜索索引。
+
+反向代理配置、自定义主题适配和限流边界见 [文章密码与服务端访问](../../developer/POST_ACCESS.zh-CN.md)。
 
 ## 4.10.10 发布要点
 
